@@ -1,14 +1,22 @@
 from django.db import models
 from django.utils.text import slugify
+from rest_framework.exceptions import ValidationError
 
 
 class Stop(models.Model):
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(unique=True)
 
+    prepopulated_fields = {"slug": ("title",)}
+
     def save(self, *args, **kwargs):
-        self.slug = slugify(self.name)
-        super(Stop, self).save(*args, **kwargs)
+        slugified_name = slugify(self.name)
+        try:
+            colliding_stop = Stop.objects.get(slug=slugified_name)
+            raise ValidationError(f'Stop slug name collides with another stop slug name (Stop "{colliding_stop.name}")')
+        except Stop.DoesNotExist:
+            self.slug = slugified_name
+            super(Stop, self).save(*args, **kwargs)
 
     def __str__(self):
         return self.name
@@ -29,8 +37,10 @@ class Route(models.Model):
 
     @property
     def name(self):
-        stops = Stop.objects.filter(route=self.pk).order_by('routestop__number_on_route')
-        return f'{stops[0].name} - {stops[len(stops) - 1].name}'
+        stops_on_route = self.routestop_set.all().order_by('number_on_route')
+        if len(stops_on_route) > 1:
+            return f'{stops_on_route[0].stop.name} - {stops_on_route[len(stops_on_route) - 1].stop.name}'
+        return self.number
 
     def __str__(self):
         return str(self.number)
