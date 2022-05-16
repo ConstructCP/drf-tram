@@ -9,7 +9,8 @@ class Stop(models.Model):
 
     prepopulated_fields = {"slug": ("title",)}
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs) -> None:
+        """ Verify there is no other stop with the same slug and save """
         slugified_name = slugify(self.name)
         try:
             colliding_stop = Stop.objects.get(slug=slugified_name)
@@ -36,7 +37,8 @@ class Route(models.Model):
     stops = models.ManyToManyField(Stop, through='RouteStop')
 
     @property
-    def name(self):
+    def name(self) -> str:
+        """ Create route name basing on first and last stop, if no stops - use route number """
         stops_on_route = self.routestop_set.all().order_by('number_on_route')
         if len(stops_on_route) > 1:
             return f'{stops_on_route[0].stop.name} - {stops_on_route[len(stops_on_route) - 1].stop.name}'

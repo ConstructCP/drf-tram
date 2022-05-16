@@ -1,3 +1,5 @@
+from typing import Dict, List, Tuple
+
 from rest_framework import serializers
 
 from .models import Stop, Route, RouteStop, StopConnection
@@ -44,7 +46,12 @@ class RouteCreationSerializer(serializers.ModelSerializer):
         model = Route
         fields = ['number', 'stops']
 
-    def validate(self, data):
+    def validate(self, data: dict) -> dict:
+        """
+        Data validation
+        Check uniqueness of route number
+        Check there are at least 2 stops, stop ids are valid and stops have connection
+        """
         errors = []
         data = super().validate(data)
 
@@ -66,13 +73,14 @@ class RouteCreationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(errors)
         return data
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict) -> Route:
+        """ Create new route """
         route = Route.objects.create(number=validated_data['number'])
-
         self.add_stops_in_route(route, self.initial_data['stops'])
         return route
 
-    def update(self, instance, validated_data):
+    def update(self, instance: Route, validated_data: dict) -> Route:
+        """ Update existing route """
         self.instance.number = validated_data['number']
         self.instance.save()
         stops_on_route = RouteStop.objects.filter(route=self.instance)
@@ -81,7 +89,8 @@ class RouteCreationSerializer(serializers.ModelSerializer):
         self.add_stops_in_route(self.instance, self.initial_data['stops'])
         return self.instance
 
-    def add_stops_in_route(self, route, stops):
+    def add_stops_in_route(self, route: Route, stops: List[Dict]) -> None:
+        """ Create RouteStop objects thus linking route and its stops """
         route_stops = []
         try:
             number_on_route = 1
@@ -97,7 +106,8 @@ class RouteCreationSerializer(serializers.ModelSerializer):
                 route_stop.delete()
             raise e
 
-    def validate_stop_ids(self, stops_data):
+    def validate_stop_ids(self, stops_data: dict) -> Tuple[bool, list]:
+        """ Verify all stop ids provided for route are valid """
         errors = []
         for stop in stops_data:
             for key, value in stop.items():
@@ -109,7 +119,8 @@ class RouteCreationSerializer(serializers.ModelSerializer):
                     errors.append({'stops': f'Invalid stop id provided: {value}'})
         return len(errors) == 0, errors
 
-    def validate_stop_connections(self, stops_data):
+    def validate_stop_connections(self, stops_data: dict) -> Tuple[bool, list]:
+        """ Verify all stops provided for route are connected. Check connection each pair of stops in sequence. """
         errors = []
         for stop1, stop2 in zip(stops_data[:-1], stops_data[1:]):
             if (
