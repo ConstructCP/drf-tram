@@ -6,16 +6,19 @@ from rest_framework import generics
 from .models import Stop, Route
 from .serializers import StopSerializer, RouteSerializer, \
     StopDetailSerializer, RouteDetailSerializer, RouteCreationSerializer
+from .permissions import ReadAnyoneWriteAdmin
 
 
 class StopView(generics.ListCreateAPIView):
     queryset = Stop.objects.all()
     serializer_class = StopSerializer
+    permission_classes = [ReadAnyoneWriteAdmin]
 
 
 class StopDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Stop.objects.all()
     lookup_field = 'slug'
+    permission_classes = [ReadAnyoneWriteAdmin]
 
     def get_serializer_class(self) -> serializers.Serializer:
         """ Return regular serializer for GET request and detailed serializer for other requests """
@@ -35,6 +38,7 @@ class StopDetailView(generics.RetrieveUpdateDestroyAPIView):
 class RouteView(viewsets.ModelViewSet):
     queryset = Route.objects.all()
     lookup_field = 'number'
+    permission_classes = [ReadAnyoneWriteAdmin]
 
     def get_serializer_class(self) -> serializers.Serializer:
         """ Return right serializer basing on request type """

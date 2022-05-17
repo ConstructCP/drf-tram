@@ -1,6 +1,8 @@
 from django.test import TestCase
 from django.utils.text import slugify
+from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
+from rest_framework.authtoken.models import Token
 import django
 import os
 
@@ -18,10 +20,16 @@ class TestStop(TestCase):
             stop_obj = Stop.objects.create(name=stop_name)
             self.stops[stop_name] = stop_obj
 
+        self.admin = get_user_model().objects.create(
+            username='test-admin', password='test-password', email='test-admin@example.com',
+            is_staff=True,
+        )
+        self.admin_token = Token.objects.create(user=self.admin)
         self.client = APIClient()
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.admin_token.key)
 
     def test_get_all_stops(self):
-        response = self.client.get('/tram/stops/')
+        response = self.client.get('/api/v1/tram/stops/')
         self.assertEqual(response.status_code, 200)
         response_data = response.json()
         self.assertEqual(len(response_data), len(self.stops))
@@ -34,7 +42,7 @@ class TestStop(TestCase):
     def test_get_one_stop(self):
         stop_name = self.stop_names[0]
         stop_slug = self.stops[stop_name].slug
-        response = self.client.get(f'/tram/stops/{stop_slug}/')
+        response = self.client.get(f'/api/v1/tram/stops/{stop_slug}/')
         self.assertEqual(response.status_code, 200)
         response_stop = response.json()
         db_stop = Stop.objects.get(name=stop_name)
@@ -45,7 +53,7 @@ class TestStop(TestCase):
 
     def test_create_stop(self):
         stop_data = {'name': 'stop create'}
-        response = self.client.post('/tram/stops/', data=stop_data)
+        response = self.client.post('/api/v1/tram/stops/', data=stop_data)
         self.assertEqual(response.status_code, 201)
 
         stop_from_db = Stop.objects.get(name=stop_data['name'])
@@ -57,7 +65,7 @@ class TestStop(TestCase):
         stop = Stop.objects.create(name=stop_name)
 
         updated_data = {'name': 'stop update modified'}
-        response = self.client.put(f'/tram/stops/{stop.slug}/', data=updated_data)
+        response = self.client.put(f'/api/v1/tram/stops/{stop.slug}/', data=updated_data)
         self.assertEqual(response.status_code, 200)
         updated_stop = Stop.objects.get(name=updated_data['name'])
         self.assertEqual(updated_stop.id, stop.id)
@@ -66,7 +74,7 @@ class TestStop(TestCase):
         stop_name = 'stop delete'
         stop = Stop.objects.create(name=stop_name)
 
-        response = self.client.delete(f'/tram/stops/{stop.slug}/')
+        response = self.client.delete(f'/api/v1/tram/stops/{stop.slug}/')
         self.assertEqual(response.status_code, 204)
         self.assertNotIn(stop, Stop.objects.all())
 
@@ -90,10 +98,16 @@ class TestRoute(TestCase):
             RouteStop(route=self.route2, stop=self.stop3, number_on_route=2),
         ])
 
+        self.admin = get_user_model().objects.create(
+            username='test-admin', password='test-password', email='test-admin@example.com',
+            is_staff=True,
+        )
+        self.admin_token = Token.objects.create(user=self.admin)
         self.client = APIClient()
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + self.admin_token.key)
 
     def test_get_route_list(self):
-        response = self.client.get('/tram/routes/')
+        response = self.client.get('/api/v1/tram/routes/')
         self.assertEqual(response.status_code, 200)
         response_data = response.json()
         self.assertEqual(len(response_data), 2)
@@ -104,7 +118,7 @@ class TestRoute(TestCase):
             self.assertEqual(route_db.name, route_response['name'])
 
     def test_get_route_details(self):
-        response = self.client.get(f'/tram/routes/{self.route2.number}/')
+        response = self.client.get(f'/api/v1/tram/routes/{self.route2.number}/')
         self.assertEqual(response.status_code, 200)
         route_response = response.json()
         route_db = Route.objects.get(number=self.route2.number)
@@ -125,7 +139,7 @@ class TestRoute(TestCase):
                 {'id': self.stop2.id},
             ]
         }
-        response = self.client.post('/tram/routes/', data=route_data, format='json')
+        response = self.client.post('/api/v1/tram/routes/', data=route_data, format='json')
         self.assertEqual(response.status_code, 201)
 
         route_db = Route.objects.get(number=route_data['number'])
@@ -147,7 +161,7 @@ class TestRoute(TestCase):
                 {'id': self.stop3.id},
             ]
         }
-        response = self.client.put(f'/tram/routes/{route.number}/', data=route_updated_data, format='json')
+        response = self.client.put(f'/api/v1/tram/routes/{route.number}/', data=route_updated_data, format='json')
         self.assertEqual(response.status_code, 200)
 
         route_updated = Route.objects.get(id=route.id)
@@ -160,7 +174,7 @@ class TestRoute(TestCase):
 
     def test_route_delete(self):
         route = Route.objects.create(number=30)
-        response = self.client.delete(f'/tram/routes/{route.number}/')
+        response = self.client.delete(f'/api/v1/tram/routes/{route.number}/')
         self.assertEqual(response.status_code, 204)
         self.assertNotIn(route, Route.objects.all())
 
@@ -173,7 +187,7 @@ class TestRoute(TestCase):
             'number': 40,
             'stops': []
         }
-        response = self.client.post('/tram/routes/', data=route_data, format='json')
+        response = self.client.post('/api/v1/tram/routes/', data=route_data, format='json')
         self.assertEqual(response.status_code, 400)
 
     def test_route_with_no_connection_of_stops(self):
@@ -184,13 +198,13 @@ class TestRoute(TestCase):
                 {'id': self.stop3.id},
             ]
         }
-        response = self.client.post('/tram/routes/', data=route_data, format='json')
+        response = self.client.post('/api/v1/tram/routes/', data=route_data, format='json')
         self.assertEqual(response.status_code, 400)
 
     def test_list_routes_on_stop(self):
-        stop1 = self.client.get(f'/tram/stops/{self.stop1.slug}/')
-        stop2 = self.client.get(f'/tram/stops/{self.stop2.slug}/')
-        stop3 = self.client.get(f'/tram/stops/{self.stop3.slug}/')
+        stop1 = self.client.get(f'/api/v1/tram/stops/{self.stop1.slug}/')
+        stop2 = self.client.get(f'/api/v1/tram/stops/{self.stop2.slug}/')
+        stop3 = self.client.get(f'/api/v1/tram/stops/{self.stop3.slug}/')
 
         routes_stop1 = [r['id'] for r in stop1.json()['routes']]
         routes_stop2 = [r['id'] for r in stop2.json()['routes']]
@@ -199,3 +213,77 @@ class TestRoute(TestCase):
         self.assertEqual(routes_stop1, [self.route1.id])
         self.assertEqual(routes_stop2, [self.route1.id, self.route2.id])
         self.assertEqual(routes_stop3, [self.route2.id])
+
+
+class TestPermissions(TestCase):
+    def setUp(self):
+        self.stop1 = Stop.objects.create(name='stop 1')
+        self.stop2 = Stop.objects.create(name='stop 2')
+        StopConnection.objects.create(stop1=self.stop1, stop2=self.stop2)
+
+        self.admin = get_user_model().objects.create(
+            username='test-admin', password='test-password', email='test-admin@example.com',
+            is_staff=True
+        )
+        self.user = get_user_model().objects.create(
+            username='test-user', password='test-password', email='test-user@example.com'
+        )
+        self.admin_token = Token.objects.create(user=self.admin)
+        self.user_token = Token.objects.create(user=self.user)
+
+        self.admin_client = APIClient()
+        self.user_client = APIClient()
+        self.unauthenticated_client = APIClient()
+
+        self.admin_client.credentials(HTTP_AUTHORIZATION='Token ' + self.admin_token.key)
+        self.user_client.credentials(HTTP_AUTHORIZATION='Token ' + self.user_token.key)
+
+    def test_stops_get(self):
+        unauth_response = self.unauthenticated_client.get('/api/v1/tram/stops/')
+        self.assertEqual(unauth_response.status_code, 200)
+
+        user_response = self.user_client.get('/api/v1/tram/stops/')
+        self.assertEqual(user_response.status_code, 200)
+
+        admin_response = self.admin_client.get('/api/v1/tram/stops/')
+        self.assertEqual(admin_response.status_code, 200)
+
+    def test_stops_post(self):
+        request_data = {'name': 'permission test stop'}
+
+        unauth_response = self.unauthenticated_client.post('/api/v1/tram/stops/', data=request_data, format='json')
+        self.assertEqual(unauth_response.status_code, 401)
+
+        user_response = self.user_client.post('/api/v1/tram/stops/', data=request_data, format='json')
+        self.assertEqual(user_response.status_code, 403)
+
+        admin_response = self.admin_client.post('/api/v1/tram/stops/', data=request_data, format='json')
+        self.assertEqual(admin_response.status_code, 201)
+
+    def test_routes_get(self):
+        unauth_response = self.unauthenticated_client.get('/api/v1/tram/routes/')
+        self.assertEqual(unauth_response.status_code, 200)
+
+        user_response = self.user_client.get('/api/v1/tram/routes/')
+        self.assertEqual(user_response.status_code, 200)
+
+        admin_response = self.admin_client.get('/api/v1/tram/routes/')
+        self.assertEqual(admin_response.status_code, 200)
+
+    def test_routes_post(self):
+        request_data = {
+            'number': 10,
+            'stops': [
+                {'id': self.stop1.id},
+                {'id': self.stop2.id},
+            ]
+        }
+
+        unauth_response = self.unauthenticated_client.post('/api/v1/tram/routes/', data=request_data, format='json')
+        self.assertEqual(unauth_response.status_code, 401)
+
+        user_response = self.user_client.post('/api/v1/tram/routes/', data=request_data, format='json')
+        self.assertEqual(user_response.status_code, 403)
+
+        admin_response = self.admin_client.post('/api/v1/tram/routes/', data=request_data, format='json')
+        self.assertEqual(admin_response.status_code, 201)
