@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'routes',
+    'accounts',
 ]
 
 MIDDLEWARE = [
@@ -139,3 +140,9 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticatedOrReadOnly",
     ],
 }
+
+AUTH_USER_MODEL = 'accounts.User'
+AUTHENTICATION_BACKENDS = [
+    'accounts.backend.EmailOrUsernameModelBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
