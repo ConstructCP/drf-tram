@@ -65,8 +65,8 @@ class RouteCreationSerializer(serializers.ModelSerializer):
             is_ids_valid, stops_ids_errors = self.validate_stop_ids(self.initial_data['stops'])
             if not is_ids_valid:
                 errors += stops_ids_errors
-            is_conncetions_valid, stops_connection_errors = self.validate_stop_connections(self.initial_data['stops'])
-            if not is_conncetions_valid:
+            is_connections_valid, stops_connection_errors = self.validate_stop_connections(self.initial_data['stops'])
+            if not is_connections_valid:
                 errors += stops_connection_errors
 
         if errors:
