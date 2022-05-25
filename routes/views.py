@@ -1,3 +1,5 @@
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework import viewsets, serializers
@@ -14,6 +16,10 @@ class StopView(generics.ListCreateAPIView):
     serializer_class = StopSerializer
     permission_classes = [ReadAnyoneWriteAdmin]
 
+    @method_decorator(cache_page(300))
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
 
 class StopDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Stop.objects.all()
@@ -26,6 +32,7 @@ class StopDetailView(generics.RetrieveUpdateDestroyAPIView):
             return StopDetailSerializer
         return StopSerializer
 
+    @method_decorator(cache_page(300))
     def retrieve(self, request: Request, *args, **kwargs) -> Response:
         """ Get stop object with routes on this stop """
         stop = Stop.objects.get(slug=self.kwargs['slug'])
@@ -47,3 +54,11 @@ class RouteView(viewsets.ModelViewSet):
         elif self.action in ('create', 'update'):
             return RouteCreationSerializer
         return RouteDetailSerializer
+
+    @method_decorator(cache_page(300))
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
+    @method_decorator(cache_page(300))
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)

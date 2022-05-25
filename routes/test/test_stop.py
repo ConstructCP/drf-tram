@@ -1,4 +1,5 @@
-from django.test import TestCase
+from django.conf import settings
+from django.test import TestCase, override_settings
 from django.utils.text import slugify
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
@@ -12,7 +13,9 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'tram.settings'
 django.setup()
 
 
+@override_settings(CACHES=settings.TEST_CACHES)
 class TestStop(TestCase):
+
     def setUp(self):
         self.stop_names = ['stop 1', 'stop 2', 'stop 3']
         self.stops = {}
