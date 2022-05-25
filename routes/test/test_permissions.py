@@ -17,11 +17,11 @@ class TestPermissions(TestCase):
         self.stop2 = Stop.objects.create(name='stop 2')
         StopConnection.objects.create(stop1=self.stop1, stop2=self.stop2)
 
-        self.admin = get_user_model().objects.create(
+        self.admin = get_user_model().objects.create_user(
             username='test-admin', password='test-password', email='test-admin@example.com',
             is_staff=True
         )
-        self.user = get_user_model().objects.create(
+        self.user = get_user_model().objects.create_user(
             username='test-user', password='test-password', email='test-user@example.com'
         )
         self.admin_token = Token.objects.create(user=self.admin)

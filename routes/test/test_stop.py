@@ -20,7 +20,7 @@ class TestStop(TestCase):
             stop_obj = Stop.objects.create(name=stop_name)
             self.stops[stop_name] = stop_obj
 
-        self.admin = get_user_model().objects.create(
+        self.admin = get_user_model().objects.create_user(
             username='test-admin', password='test-password', email='test-admin@example.com',
             is_staff=True,
         )

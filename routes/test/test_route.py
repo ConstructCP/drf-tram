@@ -30,7 +30,7 @@ class TestRoute(TestCase):
             RouteStop(route=self.route2, stop=self.stop3, number_on_route=2),
         ])
 
-        self.admin = get_user_model().objects.create(
+        self.admin = get_user_model().objects.create_user(
             username='test-admin', password='test-password', email='test-admin@example.com',
             is_staff=True,
         )
